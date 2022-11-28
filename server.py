@@ -3,7 +3,9 @@
 
 # Instead, edit the init() and inference() functions in app.py
 
-from sanic import Sanic, response
+from fastapi import FastAPI
+from fastapi.exceptions import HTTPException
+from pydantic import BaseModel, Field
 import subprocess
 import app as user_src
 
@@ -12,31 +14,48 @@ import app as user_src
 user_src.init()
 
 # Create the http server app
-server = Sanic("my_app")
+app = FastAPI(title="Stable Diffusion API")
 
-# Healthchecks verify that the environment is correct on Banana Serverless
-@server.route('/healthcheck', methods=["GET"])
+
+class HealthCheckResponse(BaseModel):
+    state: str = Field(..., title="State", description="State of system")
+    gpu: bool = Field(..., title="GPU", description="State of gpu")
+
+
+class TrainingRequest(BaseModel):
+    unique_keys: set = Field(..., title="Training config", description="JSON training config")
+
+
+class TrainingResult(BaseModel):
+    log: str = Field(..., title="LogResult", description="Log of the result")
+    time: float = Field(..., title="Time", description="Total duration of the training")
+
+
+# Healthchecks verify that the environment is correct
+@app.get('/healthcheck', response_model=HealthCheckResponse)
 def healthcheck(request):
     # dependency free way to check if GPU is visible
     gpu = False
     out = subprocess.run("nvidia-smi", shell=True)
-    if out.returncode == 0: # success state on shell command
+    if out.returncode == 0:  # success state on shell command
         gpu = True
+    return HealthCheckResponse(state="state", gpu=gpu)
 
-    return response.json({"state": "healthy", "gpu": gpu})
 
-# Inference POST handler at '/' is called for every http call from Banana
-@server.route('/', methods=["POST"]) 
-def inference(request):
+# Inference POST handler at '/' is called for every http call
+@app.post('/', response_model=TrainingResult)
+def inference(request: TrainingRequest):
+    concept_list = []
     try:
-        model_inputs = response.json.loads(request.json)
-    except:
-        model_inputs = request.json
-
-    output = user_src.inference(model_inputs)
-
-    return response.json(output)
-
-
-if __name__ == '__main__':
-    server.run(host='0.0.0.0', port="8000", workers=1)
+        for key in request.unique_keys:
+            key_dic = {
+                'instance_prompt': f'photo of {key} person',
+                'class_prompt': 'a photo of a person, ultra detailed',
+                'instance_data_dir': f'/data/images/{key}',
+                'class_data_dir': '/data/regularization/Mix'
+            }
+            concept_list.append(key_dic)
+        output = user_src.inference(concept_list)
+    except Exception as error:
+        return HTTPException(500, detail=str(error))
+    return TrainingResult(output)

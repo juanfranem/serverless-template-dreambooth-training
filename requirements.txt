@@ -14,6 +14,7 @@ boto3
 OmegaConf
 numpy
 deepspeed
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
+Pillow==9.2.0
+tqdm==4.64.1
+fastapi
+uvicorn[standard]
