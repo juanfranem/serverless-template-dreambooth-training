@@ -8,6 +8,7 @@ from fastapi.exceptions import HTTPException
 from pydantic import BaseModel, Field
 import subprocess
 import app as user_src
+import uvicorn
 
 # We do the model load-to-GPU step on server startup
 # so the model object is available globally for reuse
@@ -59,3 +60,7 @@ def inference(request: TrainingRequest):
     except Exception as error:
         return HTTPException(500, detail=str(error))
     return TrainingResult(output)
+
+
+if __name__ == '__main__':
+    uvicorn.run(app, port=8080, host='0.0.0.0')

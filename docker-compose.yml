@@ -1,0 +1,25 @@
+version: '3'
+
+services:
+  dreambooth:
+    container_name: dreambooth
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        HF_AUTH_TOKEN: $HF_AUTH_TOKEN
+    environment:
+      - .env
+    ports:
+      - "80:8080"
+    stdin_open: true
+    tty: true
+    restart: on-failure
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [ gpu ]
+    volumes:
+      - ./../models/:/data/model/
+      - ./../images/:/data/images/

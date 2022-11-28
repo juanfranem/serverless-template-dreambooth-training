@@ -4,7 +4,7 @@ FROM pytorch/pytorch:1.13.0-cuda11.6-cudnn8-runtime
 WORKDIR /
 
 # Install git
-RUN apt-get update && apt-get install -y git build-essential wget
+RUN apt-get update && apt-get install -y git build-essential wget unzip rename
 
 # Install python packages
 RUN conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.6 -c pytorch -c conda-forge
@@ -45,4 +45,4 @@ ADD train.sh .
 ADD app.py .
 
 # Run api service
-CMD uvicorn --host 0.0.0.0:8080 server:app
+CMD python3 -u server.py
